@@ -1,14 +1,14 @@
 package org.example;
 
 public class TreeNode {
-    String key;
+    Long key;
     MarketChequeData data;
     TreeNode left, right;
+    int height;
 
-    public TreeNode(String key, MarketChequeData data) {
+    public TreeNode(Long key, MarketChequeData data) {
         this.key = key;
         this.data = data;
-        this.left = null;
-        this.right = null;
+        this.height = 1;
     }
 }

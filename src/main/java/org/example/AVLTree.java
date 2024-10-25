@@ -3,7 +3,10 @@ package org.example;
 public class AVLTree {
     private TreeNode root;
 
-    private static class TreeNode {
+    public TreeNode getRoot() {
+        return root;
+    }
+    public static class TreeNode {
         Long key;
         MarketChequeData data;
         TreeNode left, right;
@@ -12,9 +15,7 @@ public class AVLTree {
         TreeNode(Long key, MarketChequeData data) {
             this.key = key;
             this.data = data;
-            this.left = null;
-            this.right = null;
-            this.height = 1; // New nodes are initially added at height 1
+            this.height = 1;
         }
     }
 
