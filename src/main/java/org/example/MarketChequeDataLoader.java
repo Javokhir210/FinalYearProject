@@ -7,13 +7,12 @@ import java.io.FileReader;
 import java.io.IOException;
 
 public class MarketChequeDataLoader {
-    public static void loadData(String filePath, AVLTree tree) {
+    public static void loadData(String filePath, BTree tree) {
         try (CSVReader reader = new CSVReader(new FileReader(filePath))) {
-            reader.readNext();
+            reader.readNext(); // Skip header row
             String[] line;
 
             while ((line = reader.readNext()) != null) {
-
                 Long chequeId = Long.valueOf(line[0]);
                 String marketName = line[1];
                 String chequeNumber = line[2];
@@ -48,7 +47,7 @@ public class MarketChequeDataLoader {
                 record.setCashBackAmount(cashBackAmount);
                 record.setLoyaltyPointsEarned(loyaltyPointsEarned);
 
-                // Insert using chequeId as key, depending on uniqueness
+                // Insert into the BTree using chequeId as the key
                 tree.insert(chequeId, record);
             }
         } catch (IOException | CsvValidationException e) {
