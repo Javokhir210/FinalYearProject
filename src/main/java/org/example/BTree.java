@@ -1,243 +1,136 @@
 package org.example;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.List;
 
-public class BTree {
-    private final int T; // Allow T to be flexible, set based on data size
-    private BTreeNode root;
 
-    public BTree(int T) {
-        this.T = T;
-        this.root = new BTreeNode(true, T);
-    }
+@Getter
+public class BTree<K extends Comparable<K>> {
+    private static final int T = 3; // Minimum degree for the B-tree
+    private Node root;
 
-    public BTreeNode getRoot() {
-        return root;
-    }
-
-    public void insert(Long key, MarketChequeData data) {
-        if (root.isFull()) {
-            BTreeNode newRoot = new BTreeNode(false, T);
-            newRoot.children.add(root);
-            newRoot.splitChild(0, root);
-            root = newRoot;
-        }
-        root.insertNonFull(key, data);
-    }
-
-    public MarketChequeData search(Long key) {
-        return root == null ? null : root.search(key);
-    }
-
-    public static class BTreeNode {
-        List<Long> keys;
-        List<MarketChequeData> data;
-        List<BTreeNode> children;
+    protected class Node {
+        List<K> keys; // List of keys
+        List<MarketChequeData> values; // List of associated values
+        List<Node> children; // List of child nodes
         boolean isLeaf;
-        final int T;
 
-        public BTreeNode(boolean isLeaf, int T) {
-            this.isLeaf = isLeaf;
-            this.T = T;
-            this.keys = new ArrayList<>(2 * T - 1);
-            this.data = new ArrayList<>(2 * T - 1);
-            this.children = new ArrayList<>(2 * T);
+        Node() {
+            keys = new ArrayList<>();
+            values = new ArrayList<>();
+            children = new ArrayList<>();
+            isLeaf = true;
         }
+    }
 
-        public boolean isFull() {
-            return keys.size() == 2 * T - 1;
-        }
+    public BTree(int t) {
+        // Initialize the root node
+        this.root = new Node();
+    }
 
-        public void insertNonFull(Long key, MarketChequeData data) {
-            int i = keys.size() - 1;
-            if (isLeaf) {
-                while (i >= 0 && key < keys.get(i)) {
-                    i--;
-                }
-                keys.add(i + 1, key);
-                this.data.add(i + 1, data);
-            } else {
-                while (i >= 0 && key < keys.get(i)) {
-                    i--;
-                }
-                i++;
-                if (children.get(i).isFull()) {
-                    splitChild(i, children.get(i));
-                    if (key > keys.get(i)) {
-                        i++;
-                    }
-                }
-                children.get(i).insertNonFull(key, data);
+    // Method to get all keys in the B-tree
+    public List<K> getKeys() {
+        List<K> allKeys = new ArrayList<>();
+        getKeysRecursive(root, allKeys);
+        return allKeys;
+    }
+
+    // Recursive method to collect keys
+    private void getKeysRecursive(Node node, List<K> allKeys) {
+        if (node != null) {
+            for (K key : node.keys) {
+                allKeys.add(key);
+            }
+            for (Node child : node.children) {
+                getKeysRecursive(child, allKeys); // Recurse for child nodes
             }
         }
+    }
 
-        public void splitChild(int i, BTreeNode y) {
-            BTreeNode z = new BTreeNode(y.isLeaf, T);
-            for (int j = 0; j < T - 1; j++) {
-                z.keys.add(y.keys.remove(T));
-                z.data.add(y.data.remove(T));
+    // Insert a key-value pair into the B-tree
+    public void insert(K key, MarketChequeData value) {
+        Node r = root;
+        if (r.keys.size() == 2 * T - 1) {
+            Node s = new Node();
+            root = s;
+            s.isLeaf = false;
+            s.children.add(r);
+            splitChild(s, 0, r);
+            insertNonFull(s, key, value);
+        } else {
+            insertNonFull(r, key, value);
+        }
+    }
+
+    // Insert when the node is not full
+    private void insertNonFull(Node node, K key, MarketChequeData value) {
+        int i = node.keys.size() - 1;
+        if (node.isLeaf) {
+            while (i >= 0 && key.compareTo(node.keys.get(i)) < 0) {
+                i--;
             }
-            if (!y.isLeaf) {
-                for (int j = 0; j < T; j++) {
-                    z.children.add(y.children.remove(T));
+            node.keys.add(i + 1, key);
+            node.values.add(i + 1, value);
+        } else {
+            // Find the child node to descend to
+            while (i >= 0 && key.compareTo(node.keys.get(i)) < 0) {
+                i--;
+            }
+            i++;
+            // Check if the child is full before descending
+            if (node.children.get(i).keys.size() == 2 * T - 1) {
+                splitChild(node, i, node.children.get(i));
+                if (key.compareTo(node.keys.get(i)) > 0) {
+                    i++;
                 }
             }
-            keys.add(i, y.keys.remove(T - 1));
-            data.add(i, y.data.remove(T - 1));
-            children.add(i + 1, z);
+            insertNonFull(node.children.get(i), key, value);
+        }
+    }
+
+    // Split the child at index 'i' of given node
+    private void splitChild(Node parent, int index, Node fullChild) {
+        Node newChild = new Node();
+        newChild.isLeaf = fullChild.isLeaf;
+
+        // Move the last T-1 keys and values from fullChild to newChild
+        for (int j = 0; j < T - 1; j++) {
+            newChild.keys.add(fullChild.keys.remove(T));  // Ensure fullChild has enough keys
+            newChild.values.add(fullChild.values.remove(T));
         }
 
-        public MarketChequeData search(Long key) {
-            int i = 0;
-            while (i < keys.size() && key > keys.get(i)) {
-                i++;
+        // Move the top child reference to newChild
+        if (!fullChild.isLeaf) {
+            for (int j = 0; j < T; j++) {
+                newChild.children.add(fullChild.children.remove(T));
             }
-            if (i < keys.size() && keys.get(i).equals(key)) {
-                return data.get(i);
-            }
-            return isLeaf ? null : children.get(i).search(key);
+        }
+
+        // Insert the middle key into the parent
+        parent.keys.add(index, fullChild.keys.remove(T - 1)); // Move the middle key up
+        parent.values.add(index, fullChild.values.remove(T - 1)); // Move the corresponding value up
+        parent.children.add(index + 1, newChild); // Link the new child
+    }
+
+    // Search for a key in the B-tree and return its associated value
+    public MarketChequeData search(K key) {
+        return searchRec(root, key);
+    }
+
+    private MarketChequeData searchRec(Node node, K key) {
+        int i = 0;
+        while (i < node.keys.size() && key.compareTo(node.keys.get(i)) > 0) {
+            i++;
+        }
+        if (i < node.keys.size() && key.compareTo(node.keys.get(i)) == 0) {
+            return node.values.get(i);
+        }
+        if (node.isLeaf) {
+            return null;
+        } else {
+            return searchRec(node.children.get(i), key);
         }
     }
 }
-
-
-//package org.example;
-//
-//public class AVLTree {
-//    private TreeNode root;
-//
-//    public TreeNode getRoot() {
-//        return root;
-//    }
-//    public static class TreeNode {
-//        Long key;
-//        MarketChequeData data;
-//        TreeNode left, right;
-//        int height;
-//
-//        TreeNode(Long key, MarketChequeData data) {
-//            this.key = key;
-//            this.data = data;
-//            this.height = 1;
-//        }
-//    }
-//
-//    // Utility function to get the height of a node
-//    private int height(TreeNode node) {
-//        return (node == null) ? 0 : node.height;
-//    }
-//
-//    // Right rotate
-//    private TreeNode rightRotate(TreeNode y) {
-//        TreeNode x = y.left;
-//        TreeNode T2 = x.right;
-//
-//        // Perform rotation
-//        x.right = y;
-//        y.left = T2;
-//
-//        // Update heights
-//        y.height = Math.max(height(y.left), height(y.right)) + 1;
-//        x.height = Math.max(height(x.left), height(x.right)) + 1;
-//
-//        return x; // New root
-//    }
-//
-//    // Left rotate
-//    private TreeNode leftRotate(TreeNode x) {
-//        TreeNode y = x.right;
-//        TreeNode T2 = y.left;
-//
-//        // Perform rotation
-//        y.left = x;
-//        x.right = T2;
-//
-//        // Update heights
-//        x.height = Math.max(height(x.left), height(x.right)) + 1;
-//        y.height = Math.max(height(y.left), height(y.right)) + 1;
-//
-//        return y; // New root
-//    }
-//
-//    // Get balance factor of a node
-//    private int getBalance(TreeNode node) {
-//        return (node == null) ? 0 : height(node.left) - height(node.right);
-//    }
-//
-//    // Insert a node in AVL tree
-//    public void insert(Long key, MarketChequeData data) {
-//        root = insertRec(root, key, data);
-//    }
-//
-//    private TreeNode insertRec(TreeNode node, Long key, MarketChequeData data) {
-//        // Perform the normal BST insertion
-//        if (node == null) {
-//            return new TreeNode(key, data);
-//        }
-//
-//        int compareResult = key.compareTo(node.key);
-//
-//        if (compareResult < 0) {
-//            node.left = insertRec(node.left, key, data);
-//        } else if (compareResult > 0) {
-//            node.right = insertRec(node.right, key, data);
-//        } else {
-//            // Duplicate keys not allowed
-//            return node;
-//        }
-//
-//        // Update height of this ancestor node
-//        node.height = 1 + Math.max(height(node.left), height(node.right));
-//
-//        // Get the balance factor of this ancestor node to check whether it has become unbalanced
-//        int balance = getBalance(node);
-//
-//        // If the node becomes unbalanced, then perform the necessary rotations
-//
-//        // Left Left Case
-//        if (balance > 1 && key.compareTo(node.left.key) < 0) {
-//            return rightRotate(node);
-//        }
-//
-//        // Right Right Case
-//        if (balance < -1 && key.compareTo(node.right.key) > 0) {
-//            return leftRotate(node);
-//        }
-//
-//        // Left Right Case
-//        if (balance > 1 && key.compareTo(node.left.key) > 0) {
-//            node.left = leftRotate(node.left);
-//            return rightRotate(node);
-//        }
-//
-//        // Right Left Case
-//        if (balance < -1 && key.compareTo(node.right.key) < 0) {
-//            node.right = rightRotate(node.right);
-//            return leftRotate(node);
-//        }
-//
-//        return node; // Return the (unchanged) node pointer
-//    }
-//
-//    // Search for a node in the AVL tree
-//    public MarketChequeData search(Long key) {
-//        return searchRec(root, key);
-//    }
-//
-//    private MarketChequeData searchRec(TreeNode node, Long key) {
-//        if (node == null) {
-//            return null; // Not found
-//        }
-//
-//        int compareResult = key.compareTo(node.key);
-//
-//        if (compareResult == 0) { // Key is equal to node.key
-//            return node.data; // Found
-//        } else if (compareResult < 0) { // Key is less than node.key
-//            return searchRec(node.left, key);
-//        } else { // Key is greater, search in the right subtree
-//            return searchRec(node.right, key);
-//        }
-//    }
-//}
