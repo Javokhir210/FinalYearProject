@@ -1,5 +1,7 @@
 package org.example;
 
+import java.util.List;
+
 public class Main {
     public static void main(String[] args) {
 
@@ -41,6 +43,22 @@ public class Main {
             System.out.println("Record not found for Market Name: " + specificMarketName);
         }
         System.out.println("Time spent searching by Market Name: " + (searchEndTime - searchStartTime) / 1_000_000 + " ms");
+
+        long queryStartTime = System.nanoTime();
+        List<MarketChequeData> results = index.queryByTotalAmountRange(1000.0, 3000.0);
+        System.out.println(results.size());
+//        if (!results.isEmpty()) {
+//            System.out.println("Records found with total amount between 1000 and 2000:");
+//            for (MarketChequeData data : results) {
+//                System.out.println(data.getTotalAmount());
+//            }
+//        } else {
+//            System.out.println("No records found with total amount between 1000 and 2000.");
+//        }
+        long queryEndTime = System.nanoTime();
+
+        System.out.println("Time spent querying by total amount : " + (queryEndTime - queryStartTime) / 1_000_000 + " ms");
+
     }
 
     // Calculate average amount from all records in the index

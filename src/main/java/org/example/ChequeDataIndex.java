@@ -1,5 +1,6 @@
 package org.example;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ChequeDataIndex {
@@ -40,6 +41,26 @@ public class ChequeDataIndex {
         daysToClearTree.insert(data.getDaysToClear(), data);
         cashBackAmountTree.insert(data.getCashBackAmount(), data);
         loyaltyPointsEarnedTree.insert(data.getLoyaltyPointsEarned(), data);
+    }
+
+    // Method to query records based on total amount within a specified range
+    public List<MarketChequeData> queryByTotalAmountRange(double min, double max) {
+        List<MarketChequeData> results = new ArrayList<>();
+
+        // You can iterate through all the keys in the totalAmount tree
+        for (Double totalAmountKey : totalAmountTree.getKeys()) {
+            if (totalAmountKey >= min && totalAmountKey <= max) {
+                MarketChequeData data = totalAmountTree.search(totalAmountKey); // Retrieves the associated MarketChequeData
+                if (data != null) {
+                    results.add(data);
+                }
+            }
+        }
+
+        // Sort results in ascending order based on total amount
+        results.sort((d1, d2) -> Double.compare(d1.getTotalAmount(), d2.getTotalAmount()));
+
+        return results;
     }
 
     // Search methods for each indexed field
